@@ -70,7 +70,7 @@ struct ContentView: View {
         var shows: String
         var websites: String
         
-        enum CodingKey: String, CodingKey {
+        enum CodingKey: String {
             case anime
             case shows
             case websites
