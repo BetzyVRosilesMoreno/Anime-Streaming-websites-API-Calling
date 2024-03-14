@@ -9,70 +9,59 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var  entries = [Entry]()
+    @State private var showingAlert = false
     var body: some View {
         NavigationView {
             List(entries) { entry in
-                NavigationLink {
-                    VStack {
-                        Text(entry.anime)
-                            .font(.title)
-                            .padding()
-                        Text(entry.shows)
-                            .font(.headline)
-                            .padding()
-                        Text("\"\(entry.websites)\"")
-                            .padding()
-                        Spacer()
-                    }
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(entry.shows)
-                            .fontWeight(.bold)
-                        Text(entry.anime)
-                    }
+                Link(destination: URL(string: entry.link)!) {
+                    Text(entry.name)
                 }
             }
-            .navigationTitle("Anime Streaming Websites")
-            .toolbar {
-                Button {
-                    Task {
-                        await loadData()
-                    }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-            }
+            .navigationTitle("Anime Charaters")
         }
         .task {
-            await loadData()
+            await getCategories()
+        }
+        .alert(isPresented: $showingAlert) {
+            Alert(title: Text("Loading Error"), message: Text("There was a problem loading the anime charaters"), dismissButton: .default(Text("ok")))
         }
     }
-    func loadData() async {
-        if let url = URL(string: "https://kitsu.io/api/edge/anime") {
+    
+    func getCategories() async {
+        let query = "http://api.jikan.moe/v4/anime"
+        if let url = URL(string: query) {
             if let (data, _) = try? await URLSession.shared.data(from: url) {
-                if let decodedResponse = try? JSONDecoder().decode([Entry].self, from: data) {
-                    entries = decodedResponse
+                if let decodedResponse = try? JSONDecoder().decode(Entries.self, from: data) {
+                    entries = decodedResponse.response
+                    return
                 }
             }
-           }
         }
+        showingAlert = true
     }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+struct Entry: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var link: String
     
-    struct ContentView_Previews: PreviewProvider {
-        static var previews: some View {
-            ContentView()
-        }
-    }
     
-    struct Entry: Identifiable, Codable {
-        var id = UUID()
-        var anime: String
-        var shows: String
-        var websites: String
-        
-        enum CodingKey: String {
-            case anime
-            case shows
-            case websites
-        }
+    enum CodingKeys: String, CodingKey {
+        case name = "title"
+        case link = "url"
     }
+}
+struct Entries: Codable {
+    var response: [Entry]
+    
+    enum CodingKeys: String, CodingKey {
+        case response = "data"
+    }
+}
